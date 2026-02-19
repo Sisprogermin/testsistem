@@ -1,16 +1,15 @@
 #!/bin/bash
 
-# Убеждаемся, что база данных доступна для записи
+# Создаем файл базы данных, если его нет, и даем права на запись
 touch /app/inventory.db
 chmod 666 /app/inventory.db
 
-echo "--- Запуск системы OpenNetInventory ---"
+echo "--- Инициализация OpenNetInventory ---"
 
-# Запуск Nginx
-echo "[1/2] Запуск Nginx..."
+# Запуск Nginx в фоновом режиме
+echo "[1/2] Запуск веб-сервера Nginx..."
 service nginx start
 
-# Запуск FastAPI бэкенда
-echo "[2/2] Запуск API сервера..."
-# Используем python3 напрямую для запуска server.py
+# Запуск FastAPI бэкенда через Python
+echo "[2/2] Запуск API сервера (FastAPI)..."
 python3 server.py
