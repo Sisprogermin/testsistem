@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
@@ -10,90 +9,69 @@ import { Device, DeviceStatus, DeviceType, Employee } from './types';
 
 export type View = 'dashboard' | 'devices' | 'employees' | 'map' | 'scanner';
 
-const STORAGE_KEY_DEVICES = 'open_net_inv_devices_master';
-const STORAGE_KEY_EMPLOYEES = 'open_net_inv_employees_master';
-const STORAGE_KEY_DEPTS = 'open_net_inv_depts_master';
+// Теперь используем относительный путь, так как Nginx объединяет фронт и бэк
+const API_BASE = "/api";
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [isContinuousScanning, setIsContinuousScanning] = useState(true);
-  
-  // Состояние устройств
-  const [devices, setDevices] = useState<Device[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_DEVICES);
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: '1', ip: '192.168.1.10', mac: '00:1A:2B:3C:4D:5E', hostname: 'PC-DEV-01', vendor: 'Dell Inc.', type: DeviceType.PC, status: DeviceStatus.ONLINE, lastSeen: 'Только что', x: 20, y: 30 },
-      { id: '2', ip: '192.168.1.15', mac: 'AA:BB:CC:DD:EE:FF', hostname: 'PRN-AC-02', vendor: 'HP', type: DeviceType.PRINTER, status: DeviceStatus.OFFLINE, lastSeen: '2 часа назад', x: 50, y: 80 },
-      { id: '3', ip: '192.168.1.22', mac: '12:34:56:78:9A:BC', hostname: 'SRV-STORAGE', vendor: 'Supermicro', type: DeviceType.NETWORK, status: DeviceStatus.ONLINE, lastSeen: 'Только что', x: 10, y: 10 },
-    ];
-  });
-
-  // Состояние сотрудников
-  const [employees, setEmployees] = useState<Employee[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_EMPLOYEES);
-    if (saved) return JSON.parse(saved);
-    return [
-      { id: 'e1', fullName: 'Александр Волков', department: 'IT Отдел', position: 'Старший админ', isActive: true },
-      { id: 'e2', fullName: 'Дмитрий Петров', department: 'Разработка', position: 'Программист', isActive: true },
-    ];
-  });
-
-  // Состояние отделов
-  const [departments, setDepartments] = useState<string[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_DEPTS);
-    if (saved) return JSON.parse(saved);
-    return ['IT Отдел', 'Разработка', 'Маркетинг', 'Бухгалтерия'];
-  });
-
-  // Сохранение при изменениях
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_DEVICES, JSON.stringify(devices));
-    localStorage.setItem(STORAGE_KEY_EMPLOYEES, JSON.stringify(employees));
-    localStorage.setItem(STORAGE_KEY_DEPTS, JSON.stringify(departments));
-  }, [devices, employees, departments]);
+  const [backendOnline, setBackendOnline] = useState(false);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<string[]>(['IT', 'Бухгалтерия', 'HR', 'Склад']);
 
   useEffect(() => {
-    if (!isContinuousScanning) return;
-    const interval = setInterval(() => {
-      setDevices(prev => prev.map(d => {
-        if (Math.random() > 0.98) {
-          const newStatus = d.status === DeviceStatus.ONLINE ? DeviceStatus.OFFLINE : DeviceStatus.ONLINE;
-          return { ...d, status: newStatus, lastSeen: newStatus === DeviceStatus.ONLINE ? 'Только что' : d.lastSeen };
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/devices`);
+        if (res.ok) {
+          const data = await res.json();
+          setDevices(data);
+          setBackendOnline(true);
         }
-        return d;
-      }));
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [isContinuousScanning]);
+      } catch (e) {
+        setBackendOnline(false);
+      }
+    };
+    fetchData();
+  }, []);
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'dashboard': return <Dashboard devices={devices} setView={setCurrentView} />;
-      case 'devices': return <DeviceList devices={devices} setDevices={setDevices} />;
-      case 'employees': return (
-        <EmployeeList 
-          employees={employees} 
-          setEmployees={setEmployees} 
-          departments={departments} 
-          setDepartments={setDepartments}
-        />
-      );
-      case 'map': return <FloorPlanMap devices={devices} setDevices={setDevices} />;
-      case 'scanner': return (
-        <Scanner 
-          isContinuous={isContinuousScanning} 
-          setIsContinuous={setIsContinuousScanning} 
-          devices={devices}
-        />
-      );
-      default: return <Dashboard devices={devices} setView={setCurrentView} />;
+  useEffect(() => {
+    if (devices.length > 0 && backendOnline) {
+      fetch(`${API_BASE}/devices/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(devices)
+      }).catch(() => setBackendOnline(false));
     }
+  }, [devices, backendOnline]);
+
+  const onDevicesFound = (newFound: Device[]) => {
+    setDevices(prev => {
+      const existingMacs = new Set(prev.map(d => d.mac));
+      const filtered = newFound.filter(d => d.mac !== 'Unknown' && !existingMacs.has(d.mac));
+      return [...prev, ...filtered];
+    });
   };
 
   return (
-    <Layout currentView={currentView} setView={setCurrentView} isScanning={isContinuousScanning}>
-      {renderView()}
+    <Layout currentView={currentView} setView={setCurrentView} isScanning={backendOnline}>
+      <div className="mb-4">
+        {!backendOnline && (
+          <div className="bg-rose-50 border border-rose-200 p-3 rounded-2xl flex items-center gap-3">
+            <i className="fa-solid fa-circle-exclamation text-rose-500"></i>
+            <span className="text-[10px] font-black text-rose-700 uppercase">Связь с системным сканером отсутствует. Проверьте запуск контейнера.</span>
+          </div>
+        )}
+      </div>
+      {(() => {
+        switch (currentView) {
+          case 'dashboard': return <Dashboard devices={devices} setView={setCurrentView} />;
+          case 'devices': return <DeviceList devices={devices} setDevices={setDevices} />;
+          case 'employees': return <EmployeeList employees={employees} setEmployees={setEmployees} departments={departments} setDepartments={setDepartments} />;
+          case 'map': return <FloorPlanMap devices={devices} setDevices={setDevices} />;
+          case 'scanner': return <Scanner devices={devices} onDevicesFound={onDevicesFound} />;
+        }
+      })()}
     </Layout>
   );
 };

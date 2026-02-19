@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Device, DeviceStatus, DeviceType } from '../types';
+import { Device, DeviceStatus, DeviceType } from '../types.ts';
 
 interface DeviceListProps {
   devices: Device[];
@@ -12,7 +11,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
-  // Состояние для нового устройства
   const [newDevice, setNewDevice] = useState<Partial<Device>>({
     hostname: '',
     ip: '',
@@ -55,10 +53,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
     setNewDevice({ hostname: '', ip: '', mac: '', type: DeviceType.PC, vendor: '', status: DeviceStatus.OFFLINE, lastSeen: 'Никогда', x: 0, y: 0 });
   };
 
-  const handleVNCConnect = (ip: string) => {
-    window.location.href = `vnc://${ip}`;
-  };
-
   const renderTable = (deviceGroup: Device[]) => (
     <div className="overflow-x-auto">
       <table className="w-full text-left">
@@ -96,7 +90,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
               <td className="px-6 py-4 text-[10px] text-slate-500 font-medium">{device.lastSeen}</td>
               <td className="px-6 py-4 text-center whitespace-nowrap">
                 <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleVNCConnect(device.ip)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"><i className="fa-solid fa-desktop"></i></button>
                   <button onClick={() => setEditingDevice(device)} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"><i className="fa-solid fa-pen"></i></button>
                   <button onClick={() => setDevices(prev => prev.filter(d => d.id !== device.id))} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"><i className="fa-solid fa-trash-can"></i></button>
                 </div>
@@ -116,24 +109,17 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
           <input 
             type="text" 
             placeholder="Поиск по имени, IP или производителю..." 
-            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm outline-none transition-all shadow-inner"
+            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500 text-sm outline-none transition-all shadow-inner"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-4">
-           <div className="flex flex-col items-end">
-             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Обнаружено узлов</span>
-             <span className="text-xl font-black text-slate-800">{filtered.length} / {devices.length}</span>
-           </div>
-           <div className="w-px h-8 bg-slate-200 hidden md:block"></div>
-           <button 
-             onClick={() => setIsAddModalOpen(true)}
-             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center gap-2 active:scale-95"
-           >
-             <i className="fa-solid fa-plus"></i> Добавить узел
-           </button>
-        </div>
+        <button 
+          onClick={() => setIsAddModalOpen(true)}
+          className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center gap-2 active:scale-95"
+        >
+          <i className="fa-solid fa-plus"></i> Добавить узел
+        </button>
       </div>
 
       <div className="space-y-10">
@@ -155,9 +141,8 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
         })}
       </div>
 
-      {/* Модалка добавления */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b flex justify-between items-center bg-indigo-600 text-white">
               <h3 className="text-xl font-bold">Новое устройство</h3>
@@ -178,18 +163,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
                   <input required type="text" className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm" value={newDevice.mac} onChange={e => setNewDevice({...newDevice, mac: e.target.value})} placeholder="00:00:00:00:00:00" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Категория</label>
-                  <select className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold appearance-none cursor-pointer" value={newDevice.type} onChange={e => setNewDevice({...newDevice, type: e.target.value as DeviceType})}>
-                    {Object.values(DeviceType).map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Вендор</label>
-                  <input type="text" className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold" value={newDevice.vendor} onChange={e => setNewDevice({...newDevice, vendor: e.target.value})} placeholder="HP, Dell, Cisco..." />
-                </div>
-              </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-3 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-colors">Отмена</button>
                 <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">Добавить</button>
@@ -199,9 +172,8 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
         </div>
       )}
 
-      {/* Модалка редактирования */}
       {editingDevice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b flex justify-between items-center bg-slate-50">
               <h3 className="text-xl font-bold text-slate-800">Редактирование</h3>
@@ -211,18 +183,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({ devices, setDevices }) =
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Имя устройства</label>
                 <input type="text" className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold" value={editingDevice.hostname} onChange={e => setEditingDevice({...editingDevice, hostname: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">IP-адрес</label>
-                  <input type="text" className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm" value={editingDevice.ip} onChange={e => setEditingDevice({...editingDevice, ip: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Категория</label>
-                  <select className="w-full px-4 py-3 bg-slate-100 border-0 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-bold appearance-none cursor-pointer" value={editingDevice.type} onChange={e => setEditingDevice({...editingDevice, type: e.target.value as DeviceType})}>
-                    {Object.values(DeviceType).map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setEditingDevice(null)} className="flex-1 py-3 text-slate-500 font-bold text-sm hover:bg-slate-50 rounded-xl transition-colors">Отмена</button>

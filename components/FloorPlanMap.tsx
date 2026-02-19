@@ -1,6 +1,5 @@
-
-import React, { useState, useRef, useEffect } from 'react';
-import { Device, DeviceStatus, DeviceType } from '../types';
+import React, { useState, useRef } from 'react';
+import { Device, DeviceStatus, DeviceType } from '../types.ts';
 
 const STORAGE_KEY_IMAGE = 'open_net_inv_map_image';
 
@@ -15,7 +14,6 @@ export const FloorPlanMap: React.FC<FloorPlanMapProps> = ({ devices, setDevices 
   });
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,7 +79,6 @@ export const FloorPlanMap: React.FC<FloorPlanMapProps> = ({ devices, setDevices 
               <i className="fa-solid fa-sync fa-spin mr-1"></i> ЖИВОЕ ОБНОВЛЕНИЕ
             </span>
           </div>
-          <p className="text-slate-500 text-sm italic">Расположение обновляется автоматически по данным сканера.</p>
         </div>
         <div className="flex gap-2">
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
@@ -102,8 +99,7 @@ export const FloorPlanMap: React.FC<FloorPlanMapProps> = ({ devices, setDevices 
         onPointerLeave={handlePointerUp}
       >
         <div className="absolute inset-0 bg-cover bg-center transition-all duration-500" style={{ backgroundImage: `url("${floorPlanImage}")` }}></div>
-        <div className="absolute inset-0 bg-slate-900/10 pointer-events-none group-hover/map:bg-slate-900/5 transition-colors"></div>
-
+        
         {devices.map((device) => (
           <div
             key={device.id}
@@ -121,10 +117,6 @@ export const FloorPlanMap: React.FC<FloorPlanMapProps> = ({ devices, setDevices 
                 device.type === DeviceType.PRINTER ? 'fa-print' : 'fa-wifi'
               }`}></i>
               
-              {device.status === DeviceStatus.ONLINE && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-ping"></span>
-              )}
-
               <div className="absolute top-full mt-2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none shadow-xl transition-opacity z-30">
                 {device.hostname} • {device.status.toUpperCase()}
               </div>

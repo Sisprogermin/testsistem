@@ -1,7 +1,6 @@
-
 import React from 'react';
-import { Device, DeviceStatus, DeviceType } from '../types';
-import { View } from '../App';
+import { Device, DeviceStatus, DeviceType } from '../types.ts';
+import { View } from '../App.tsx';
 
 interface DashboardProps {
   devices: Device[];
@@ -14,7 +13,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ devices, setView }) => {
   const offlineCount = total - onlineCount;
   const healthScore = total > 0 ? Math.round((onlineCount / total) * 100) : 0;
 
-  // Расчет распределения по типам для графика
   const distribution = Object.values(DeviceType).map(type => ({
     label: type,
     count: devices.filter(d => d.type === type).length,
@@ -35,7 +33,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ devices, setView }) => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Сетка основных показателей */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
           <div 
@@ -61,18 +58,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ devices, setView }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Инвентаризация: Живой график */}
         <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-slate-200 p-8 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h4 className="font-black text-slate-800 text-lg uppercase tracking-tight">Распределение ресурсов</h4>
               <p className="text-slate-400 text-xs">Автоматический подсчет по типам оборудования</p>
             </div>
-            <div className="flex gap-2">
-              <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold uppercase tracking-tighter">Real-time</span>
-            </div>
           </div>
-          
           <div className="flex items-end gap-6 h-56 px-4">
             {distribution.map((bar) => (
               <div 
@@ -99,13 +91,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ devices, setView }) => {
           </div>
         </div>
 
-        {/* Последние изменения статусов */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 flex flex-col hover:shadow-md transition-shadow">
           <div className="mb-6">
             <h4 className="font-black text-slate-800 text-lg uppercase tracking-tight">Лог мониторинга</h4>
             <p className="text-slate-400 text-xs">Последние изменения в сети</p>
           </div>
-          
           <div className="flex-1 space-y-4 overflow-y-auto pr-2 custom-scrollbar">
             {devices.slice().sort((a,b) => a.status === DeviceStatus.OFFLINE ? -1 : 1).slice(0, 5).map((dev) => (
               <div 
@@ -135,45 +125,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ devices, setView }) => {
               </div>
             ))}
           </div>
-          
           <button 
             onClick={() => setView('scanner')}
             className="mt-6 w-full py-3 bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-slate-900 hover:text-white transition-all border border-slate-200"
           >
             Смотреть весь журнал
-          </button>
-        </div>
-      </div>
-
-      {/* Нижняя панель: Сотрудники и Активы */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div 
-          onClick={() => setView('employees')}
-          className="bg-indigo-600 rounded-3xl p-8 text-white flex items-center justify-between shadow-xl shadow-indigo-100 overflow-hidden relative group cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-[0.98]"
-        >
-          <i className="fa-solid fa-user-check absolute -bottom-4 -right-4 text-8xl opacity-10 group-hover:rotate-12 group-hover:scale-125 transition-transform"></i>
-          <div className="relative z-10">
-            <h5 className="text-indigo-100 text-xs font-bold uppercase tracking-widest mb-2">Кадровая связка</h5>
-            <h3 className="text-2xl font-black">48 Сотрудников</h3>
-            <p className="text-indigo-200 text-xs mt-1">Всего закреплено 112 единиц техники</p>
-          </div>
-          <button className="relative z-10 bg-white/20 hover:bg-white/40 backdrop-blur-md px-5 py-2.5 rounded-xl text-xs font-bold transition-all border border-white/10 group-hover:px-7">
-            Управление персоналом
-          </button>
-        </div>
-
-        <div 
-          onClick={() => setView('map')}
-          className="bg-slate-800 rounded-3xl p-8 text-white flex items-center justify-between shadow-xl shadow-slate-200 overflow-hidden relative group cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all active:scale-[0.98]"
-        >
-          <i className="fa-solid fa-map-location-dot absolute -bottom-4 -right-4 text-8xl opacity-10 group-hover:-rotate-12 group-hover:scale-125 transition-transform"></i>
-          <div className="relative z-10">
-            <h5 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Локация объектов</h5>
-            <h3 className="text-2xl font-black">{devices.filter(d => d.x > 0).length} на карте</h3>
-            <p className="text-slate-400 text-xs mt-1">Размещено {Math.round((devices.filter(d => d.x > 0).length / total) * 100)}% оборудования</p>
-          </div>
-          <button className="relative z-10 bg-indigo-500 hover:bg-indigo-400 px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-900/20 group-hover:px-7">
-            Открыть план здания
           </button>
         </div>
       </div>

@@ -1,86 +1,103 @@
-
-import React, { useState, useEffect } from 'react';
-import { Device, DeviceStatus } from '../types';
+import React, { useState } from 'react';
+import { Device, DeviceStatus, DeviceType } from '../types';
 
 interface ScannerProps {
-  isContinuous: boolean;
-  setIsContinuous: (val: boolean) => void;
   devices: Device[];
+  onDevicesFound: (newDevices: Device[]) => void;
 }
 
-export const Scanner: React.FC<ScannerProps> = ({ isContinuous, setIsContinuous, devices }) => {
-  const [logs, setLogs] = useState<{msg: string, time: string, type: 'info' | 'success'}[]>([]);
+export const Scanner: React.FC<ScannerProps> = ({ devices, onDevicesFound }) => {
+  const [subnet, setSubnet] = useState('10.60.7.0/24');
+  const [isScanning, setIsScanning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [logs, setLogs] = useState<{t: string, m: string, s: 'cmd'|'info'|'ok'}[]>([]);
 
-  useEffect(() => {
-    if (!isContinuous) return;
-    
-    // Добавляем запись в лог при изменении статусов (упрощенно)
-    const onlineCount = devices.filter(d => d.status === DeviceStatus.ONLINE).length;
-    const newLog = {
-      msg: `Сканирование завершено. Обнаружено в сети: ${onlineCount} узлов.`,
-      time: new Date().toLocaleTimeString(),
-      type: 'info' as const
-    };
-    setLogs(prev => [newLog, ...prev].slice(0, 10));
-  }, [devices, isContinuous]);
+  const addLog = (m: string, s: 'cmd'|'info'|'ok' = 'info') => {
+    setLogs(prev => [{ t: new Date().toLocaleTimeString(), m, s }, ...prev].slice(0, 50));
+  };
+
+  const runRealScan = async () => {
+    if (isScanning) return;
+    setIsScanning(true);
+    setProgress(10);
+    setLogs([]);
+
+    // Относительный путь через Nginx прокси
+    const apiUrl = `/api/scan?subnet=${encodeURIComponent(subnet)}`;
+
+    addLog(`Запуск системного сканирования ${subnet}...`, 'cmd');
+
+    try {
+      const response = await fetch(apiUrl);
+      setProgress(50);
+      
+      if (!response.ok) throw new Error("Ошибка сервера");
+      
+      const data = await response.json();
+      setProgress(90);
+      
+      if (data.results && data.results.length > 0) {
+        addLog(`Найдено активных узлов: ${data.results.length}`, 'ok');
+        onDevicesFound(data.results);
+      } else {
+        addLog('Узлы в данной подсети не обнаружены.', 'info');
+      }
+      setProgress(100);
+    } catch (e: any) {
+      addLog(`Ошибка: Сканер недоступен. Проверьте статус контейнера.`, 'info');
+      setProgress(0);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-colors ${
-              isContinuous ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-slate-200 text-slate-400 shadow-none'
-            }`}>
-              <i className={`fa-solid fa-satellite-dish text-2xl ${isContinuous ? 'animate-pulse' : ''}`}></i>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white p-8 rounded-4xl border shadow-sm space-y-6">
+          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Контроллер сети</h3>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Сегмент сети</label>
+              <input 
+                type="text" 
+                value={subnet} 
+                onChange={e => setSubnet(e.target.value)}
+                className="w-full px-5 py-4 bg-slate-50 border rounded-2xl font-mono font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
             </div>
-            <div>
-              <h3 className="text-2xl font-bold text-slate-800">Фоновый монитор</h3>
-              <p className="text-slate-500 text-sm">Автоматическое обнаружение изменений в сети 24/7.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-2xl border">
-            <span className="text-xs font-bold text-slate-500 ml-2">Режим 24/7</span>
             <button 
-              onClick={() => setIsContinuous(!isContinuous)}
-              className={`w-14 h-7 rounded-full relative transition-colors ${isContinuous ? 'bg-emerald-500' : 'bg-slate-300'}`}
+              onClick={runRealScan}
+              disabled={isScanning}
+              className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                isScanning ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white hover:bg-indigo-600 shadow-xl'
+              }`}
             >
-              <div className={`absolute top-1 bg-white w-5 h-5 rounded-full shadow-sm transition-all ${isContinuous ? 'left-8' : 'left-1'}`}></div>
+              {isScanning ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-satellite-dish mr-2"></i>}
+              Начать поиск
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Интервал опроса</p>
-            <p className="text-lg font-bold text-slate-700">5 секунд</p>
-          </div>
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Методы</p>
-            <p className="text-lg font-bold text-slate-700">ARP, ICMP, SNMP</p>
-          </div>
-          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Статус потока</p>
-            <p className="text-lg font-bold text-emerald-700 flex items-center gap-2">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
-              LIVE
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h4 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-            <i className="fa-solid fa-list-ul text-slate-400"></i> Журнал событий сканера
-          </h4>
-          <div className="bg-slate-900 rounded-2xl p-6 font-mono text-xs text-emerald-400 h-64 overflow-y-auto space-y-2 border-4 border-slate-800 shadow-inner">
-            {logs.length === 0 && <div className="text-slate-500 italic">Ожидание первого цикла сканирования...</div>}
-            {logs.map((log, i) => (
-              <div key={i} className="flex gap-4 border-l border-emerald-900/50 pl-4">
-                <span className="text-slate-500">[{log.time}]</span>
-                <span>{log.msg}</span>
-              </div>
-            ))}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-8 rounded-4xl border shadow-sm">
+             <div className="flex justify-between items-end mb-4">
+                <h4 className="font-black text-slate-800 uppercase tracking-tight">Терминал сканера</h4>
+                <span className="text-4xl font-black text-indigo-600">{progress}%</span>
+             </div>
+             <div className="h-4 bg-slate-100 rounded-full overflow-hidden mb-8">
+                <div className="h-full bg-indigo-500 transition-all duration-700" style={{ width: `${progress}%` }}></div>
+             </div>
+             <div className="bg-slate-900 rounded-3xl p-6 font-mono text-[11px] h-80 overflow-y-auto custom-scrollbar flex flex-col-reverse">
+                {logs.map((l, i) => (
+                  <div key={i} className="py-1.5 flex gap-4 border-b border-white/5 last:border-0">
+                    <span className="text-slate-500">[{l.t}]</span>
+                    <span className={l.s === 'cmd' ? 'text-sky-400' : l.s === 'ok' ? 'text-emerald-400' : 'text-slate-300'}>
+                      {l.s === 'cmd' ? '# ' : ''}{l.m}
+                    </span>
+                  </div>
+                ))}
+             </div>
           </div>
         </div>
       </div>
