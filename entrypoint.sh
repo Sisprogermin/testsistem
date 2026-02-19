@@ -1,8 +1,16 @@
 #!/bin/bash
 
-# Запуск nginx в фоне
-nginx -g "daemon on;"
+# Убеждаемся, что база данных доступна для записи
+touch /app/inventory.db
+chmod 666 /app/inventory.db
 
-# Запуск Python API
-echo "Запуск FastAPI сервера инвентаризации..."
+echo "--- Запуск системы OpenNetInventory ---"
+
+# Запуск Nginx
+echo "[1/2] Запуск Nginx..."
+service nginx start
+
+# Запуск FastAPI бэкенда
+echo "[2/2] Запуск API сервера..."
+# Используем python3 напрямую для запуска server.py
 python3 server.py
